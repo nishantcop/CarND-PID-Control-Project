@@ -1,7 +1,11 @@
+[only_p]: ./image/only_P.gif "only_P"
+[only_I]: ./image/only_I.gif "only_I"
+[only_D]: ./image/only_D.gif "only_D"
+[final]: ./image/final.gif "final"
 # CarND-Controls-PID
-Self-Driving Car Engineer Nanodegree Program
+PID stands for Proportional-Integral-Derivative. The goal of this project is to create an amalgamation of these controllers to generate controlled signal to throttle, brake, steer to drive a car in real world scenario. 
 
----
+For this project we will be using race track (simulator provided in [project intro page]((https://github.com/udacity/self-driving-car-sim/releases)) in the classroom). The simulator will provide cross track error (CTE) and speed that helps us to derive proper signals.
 
 ## Dependencies
 
@@ -35,6 +39,8 @@ There's an experimental patch for windows in this [PR](https://github.com/udacit
 3. Compile: `cmake .. && make`
 4. Run it: `./pid`. 
 
+NOTE: Additionally, I've also confiigured this project to build using Visual Studio on Windows platform with uWebSockets using instructions listed [here](http://www.codza.com/blog/udacity-uws-in-visualstudio)
+
 Tips for setting up your environment can be found [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
 
 ## Editor Settings
@@ -59,40 +65,45 @@ More information is only accessible by people who are already enrolled in Term 2
 of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/e8235395-22dd-4b87-88e0-d108c5e5bbf4/concepts/6a4d8d42-6a04-4aa6-b284-1697c0fd6562)
 for instructions and the project rubric.
 
-## Hints!
+### Describe the effect each of the P, I, D components had in your implementation
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
+#### Proportional (P) component: 
+This controller is responsible for steering the car towards the center in proportion to CTE with a proportional factor tau.
+```
+-tau * cte
+```
+If I use P controller alone [`pid.Init(1, 0.0, 0.0);`] will see the oscillation (from the center of the lane) behavior of the car. This keep increasing over a period of time and car quickly goes out of the track. 
 
-## Call for IDE Profiles Pull Requests
+<a href="https://youtu.be/5oBIu2hCAhg" target="_blank">![only_p]</a>
 
-Help your fellow students!
+#### Integral (I) component: 
+The I controller is responsible to deal with systematic bias by summing all errors. This could be possible the error will go away due to the bias which causes `P` and `D` to never stablize to center. The bias could cause steering drift, etc.
+```
+int_cte += cte
+tau_i * int_cte
+```
+When I used `I` controller alone [`pid.Init(0.0, 1.0, 0.0);`], it quickly steered the car towards the left. 
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
+<a href="https://youtu.be/exhegA91Qek" target="_blank">![only_I]</a>
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
+#### Differential (D) component: 
+This controller takes care of the temporal derivative of error. What effectively it does, it tries to control the steering such that once the car has turned enough to reduce the error and ensures it doesn't overshoot center line. 
 
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
+```
+diff_cte = cte - prev_cte
+prev_cte = cte
+- tau_d * diff_cte
+```
+When I used `D` controller alone [`pid.Init(0.0, 0.0, 1.0);`], the car slowly steered towards the right. 
 
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
+<a href="https://youtu.be/2QBuiWhehHs" target="_blank">![only_D]</a>
 
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
+### Describe how the final hyperparameters were chosen
 
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+The initial values were chosen manually by tweeking the P, I and D values. Later I've used twiddle to further optimize these cofficient and settled on values:  
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+```
+pid.Init(0.06, 0.00031, 1.29);
+```
 
+<a href="https://youtu.be/uZ2IcXtUhJ4" target="_blank">![final]</a>
